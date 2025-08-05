@@ -1,0 +1,81 @@
+// prisma/schema.prisma
+
+// Этот блок указывает Prisma сгенерировать TypeScript клиент в указанную вами директорию.
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma" // Ваша кастомная директория вывода
+}
+
+// Этот блок определяет, как Prisma будет подключаться к вашей БД.
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL") // Указывает Prisma взять URL из файла .env
+}
+
+// --- Перечисления (Enums) ---
+enum PunishmentType {
+  WARN
+  MUTE
+  KICK
+  BAN
+}
+
+model User {
+  id        String @id @default(cuid()) // Внутренний ID базы данных
+  discordId String @unique // Уникальный ID пользователя из Discord. Главный идентификатор.
+  tag       String // Последний известный тег пользователя.
+
+  // Связь "один ко многим": один User может иметь записи активности на многих серверах.
+  activity UserActivity[]
+
+  // Связи для системы наказаний.
+  punishmentsReceived Punishment[] @relation("PunishmentTarget")
+  punishmentsIssued   Punishment[] @relation("PunishmentModerator")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Новая модель для хранения статистики пользователя на конкретном сервере.
+model UserActivity {
+  id String @id @default(cuid())
+
+  guildId String // ID сервера, к которому относится эта статистика.
+
+  messageCount       Int @default(0)
+  voiceTimeInSeconds Int @default(0)
+
+  // Связь "многие к одному" с глобальным пользователем.
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Гарантирует, что для пары (пользователь, сервер) будет только одна запись статистики.
+  @@unique([userId, guildId])
+}
+
+// Модель Punishment хранит информацию о выданных наказаниях.
+model Punishment {
+  id String @id @default(cuid()) // Основной, непредсказуемый ID.
+
+  // Уникальный, последовательный ID для удобства модераторов (Case #1, #2, #3...).
+  caseId Int @unique @default(autoincrement())
+
+  guildId   String // ID сервера, на котором было выдано наказание.
+  type      PunishmentType // Тип наказания (WARN, MUTE, KICK, BAN)
+  reason    String? // Причина наказания
+  expiresAt DateTime? // Дата истечения (для временных мутов/банов)
+  active    Boolean        @default(true) // Активно ли наказание сейчас
+
+  // Связь с целью наказания (кто получил)
+  target   User   @relation("PunishmentTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  targetId String
+
+  // Связь с модератором (кто выдал)
+  moderator   User   @relation("PunishmentModerator", fields: [moderatorId], references: [id], onDelete: Cascade)
+  moderatorId String
+
+  createdAt DateTime @default(now())
+}
