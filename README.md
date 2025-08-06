@@ -1,4 +1,4 @@
-```markdown
+
 # Discord Bot Framework v2 - Архитектурное Руководство
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white)
@@ -416,4 +416,4 @@ export abstract class Event<E extends keyof ClientEvents> implements IEvent<E> {
 6.  **DI**: Зарегистрируйте маппер и репозиторий в `src/core/container.ts`.
 7.  **Service**: Создайте сервис, который зависит от нового репозитория и инкапсулирует бизнес-логику.
 8.  **Command**: Используйте новый сервис в команде для взаимодействия с пользователем.
-```
+
